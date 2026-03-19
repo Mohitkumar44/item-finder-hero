@@ -1,17 +1,15 @@
-// Firebase configuration
-// IMPORTANT: Replace these with your actual Firebase project credentials
-// These are publishable keys and safe to store in client code
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyCe0tmchgjAJjSMFcgdwKBQq1K4gWa5gsg",
+  authDomain: "findit-d44c5.firebaseapp.com",
+  projectId: "findit-d44c5",
+  storageBucket: "findit-d44c5.firebasestorage.app",
+  messagingSenderId: "108096346188",
+  appId: "1:108096346188:web:13b62fab128a0104bf3ce9",
+  measurementId: "G-B45RVT28L8",
 };
 
 const app = initializeApp(firebaseConfig);
