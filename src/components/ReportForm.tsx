@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { useItems } from "@/hooks/useItems";
+import { createItem } from "@/hooks/useItems";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -25,7 +25,6 @@ interface ReportFormProps {
 
 const ReportForm = ({ open, onClose }: ReportFormProps) => {
   const { user } = useAuth();
-  const { addItem } = useItems();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -41,7 +40,7 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
 
     setLoading(true);
     try {
-      await addItem({
+      await createItem({
         title: form.title,
         description: form.description,
         category: form.category as any,
@@ -82,7 +81,7 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
         >
           <div className="flex items-center justify-between border-b border-border p-4">
             <h2 className="font-heading text-lg font-bold text-foreground">Report Found Item</h2>
-            <button onClick={onClose} className="rounded-full p-1.5 hover:bg-muted transition-colors">
+            <button type="button" onClick={onClose} className="rounded-full p-1.5 transition-colors hover:bg-muted">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -113,13 +112,15 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
 
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <Select value={form.category} onValueChange={(value) => setForm({ ...form, category: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  {CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
