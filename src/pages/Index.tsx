@@ -14,6 +14,7 @@ const Index = () => {
   const [category, setCategory] = useState("All");
   const [selectedItem, setSelectedItem] = useState<FoundItem | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [editItem, setEditItem] = useState<FoundItem | null>(null);
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
@@ -25,12 +26,22 @@ const Index = () => {
     });
   }, [items, search, category]);
 
+  const handleEdit = (item: FoundItem) => {
+    setSelectedItem(null);
+    setEditItem(item);
+    setReportOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setReportOpen(false);
+    setEditItem(null);
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <Navbar onReportClick={() => setReportOpen(true)} />
+      <Navbar onReportClick={() => { setEditItem(null); setReportOpen(true); }} />
 
       <main className="container py-6 space-y-6">
-        {/* Hero */}
         <div className="text-center space-y-2">
           <h1 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">
             Lost something? Let's <span className="text-primary">find it.</span>
@@ -84,8 +95,8 @@ const Index = () => {
         )}
       </main>
 
-      <ItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
-      <ReportForm open={reportOpen} onClose={() => setReportOpen(false)} />
+      <ItemModal item={selectedItem} onClose={() => setSelectedItem(null)} onEdit={handleEdit} />
+      <ReportForm open={reportOpen} onClose={handleCloseForm} editItem={editItem} />
     </div>
   );
 };
