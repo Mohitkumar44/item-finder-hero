@@ -52,12 +52,19 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
 
     setUploading(true);
     try {
-      const fileName = `items/${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setForm((prev) => ({ ...prev, imageUrl: url }));
-      setImagePreview(URL.createObjectURL(file));
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || "Upload failed");
+
+      setForm((prev) => ({ ...prev, imageUrl: data.secure_url }));
+      setImagePreview(data.secure_url);
       toast.success("Image uploaded!");
     } catch {
       toast.error("Failed to upload image");
