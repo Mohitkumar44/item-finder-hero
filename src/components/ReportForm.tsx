@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X, Upload } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { X, Upload, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createItem } from "@/hooks/useItems";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 const CATEGORIES = ["Electronics", "Pets", "Keys", "Wallet", "Other"] as const;
 
@@ -26,6 +28,10 @@ interface ReportFormProps {
 const ReportForm = ({ open, onClose }: ReportFormProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -33,6 +39,59 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
     location: "",
     imageUrl: "",
   });
+
+  const uploadFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileName = `items/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, fileName);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setForm((prev) => ({ ...prev, imageUrl: url }));
+      setImagePreview(URL.createObjectURL(file));
+      toast.success("Image uploaded!");
+    } catch {
+      toast.error("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) uploadFile(file);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false);
+  }, []);
+
+  const removeImage = () => {
+    setForm((prev) => ({ ...prev, imageUrl: "" }));
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +111,7 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
       });
       toast.success("Item reported successfully!");
       setForm({ title: "", description: "", category: "", location: "", imageUrl: "" });
+      setImagePreview(null);
       onClose();
     } catch {
       toast.error("Failed to report item");
@@ -138,21 +198,60 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <div className="relative">
-                <Upload className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="imageUrl"
-                  placeholder="https://example.com/photo.jpg"
-                  value={form.imageUrl}
-                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                  className="pl-9"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Paste a direct link to the image</p>
+              <Label>Item Photo</Label>
+              {imagePreview ? (
+                <div className="relative rounded-lg border border-border overflow-hidden">
+                  <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute right-2 top-2 rounded-full bg-foreground/70 p-1 text-background transition-colors hover:bg-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors ${
+                    dragOver
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                  }`}
+                >
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <p className="text-sm text-muted-foreground">Uploading...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-full bg-muted p-3">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-foreground">
+                          Drop an image here or <span className="text-primary">browse</span>
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, WEBP up to 5MB</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || uploading}>
               {loading ? "Submitting..." : "Report Item"}
             </Button>
           </form>
