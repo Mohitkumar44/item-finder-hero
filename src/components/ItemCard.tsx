@@ -1,4 +1,5 @@
 import { MapPin, Calendar, Tag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { FoundItem } from "@/types/item";
 import { motion } from "framer-motion";
 
@@ -22,13 +23,18 @@ const ItemCard = ({ item, onClick, index }: ItemCardProps) => {
       onClick={onClick}
       className="group cursor-pointer overflow-hidden rounded-lg border border-border bg-card shadow-card transition-all hover:shadow-card-hover hover:-translate-y-0.5"
     >
-      <div className="aspect-[4/3] overflow-hidden bg-muted">
+      <div className="aspect-[4/3] overflow-hidden bg-muted relative">
         <img
           src={item.imageUrl}
           alt={item.title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
+        {item.status === "found" && (
+          <Badge className="absolute left-2 top-2 bg-success text-success-foreground">
+            Returned
+          </Badge>
+        )}
       </div>
       <div className="p-4 space-y-2">
         <h3 className="font-heading font-semibold text-foreground truncate">{item.title}</h3>

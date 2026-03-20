@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import {
   collection,
   addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   onSnapshot,
   query,
   orderBy,
@@ -17,6 +20,17 @@ export const createItem = async (item: Omit<FoundItem, "id" | "createdAt">) => {
   });
 };
 
+export const updateItem = async (
+  itemId: string,
+  data: Partial<Omit<FoundItem, "id" | "createdAt">>
+) => {
+  await updateDoc(doc(db, "items", itemId), data);
+};
+
+export const deleteItem = async (itemId: string) => {
+  await deleteDoc(doc(db, "items", itemId));
+};
+
 export const useItems = () => {
   const [items, setItems] = useState<FoundItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +43,9 @@ export const useItems = () => {
         const data = snap.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          createdAt:
+            doc.data().createdAt?.toDate?.()?.toISOString() ||
+            new Date().toISOString(),
         })) as FoundItem[];
 
         setItems(data);
@@ -37,7 +53,7 @@ export const useItems = () => {
       },
       () => {
         setLoading(false);
-      },
+      }
     );
 
     return unsub;

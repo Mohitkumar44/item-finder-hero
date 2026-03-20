@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { X, Upload, ImageIcon } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { createItem } from "@/hooks/useItems";
+import { createItem, updateItem } from "@/hooks/useItems";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import type { FoundItem } from "@/types/item";
+
 const CLOUDINARY_CLOUD_NAME = "dymnz91fx";
 const CLOUDINARY_UPLOAD_PRESET = "findit";
 
@@ -23,9 +25,10 @@ const CATEGORIES = ["Electronics", "Pets", "Keys", "Wallet", "Other"] as const;
 interface ReportFormProps {
   open: boolean;
   onClose: () => void;
+  editItem?: FoundItem | null;
 }
 
-const ReportForm = ({ open, onClose }: ReportFormProps) => {
+const ReportForm = ({ open, onClose, editItem }: ReportFormProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -38,7 +41,26 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
     category: "" as string,
     location: "",
     imageUrl: "",
+    contactNumber: "",
   });
+
+  // Pre-fill when editing
+  useEffect(() => {
+    if (editItem) {
+      setForm({
+        title: editItem.title,
+        description: editItem.description,
+        category: editItem.category,
+        location: editItem.location,
+        imageUrl: editItem.imageUrl,
+        contactNumber: editItem.contactNumber || "",
+      });
+      setImagePreview(editItem.imageUrl);
+    } else {
+      setForm({ title: "", description: "", category: "", location: "", imageUrl: "", contactNumber: "" });
+      setImagePreview(null);
+    }
+  }, [editItem, open]);
 
   const uploadFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -106,22 +128,37 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
 
     setLoading(true);
     try {
-      await createItem({
-        title: form.title,
-        description: form.description,
-        category: form.category as any,
-        location: form.location,
-        imageUrl: form.imageUrl || "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600",
-        finderEmail: user.email || "",
-        finderName: user.displayName || "Anonymous",
-        finderPhoto: user.photoURL || "",
-      });
-      toast.success("Item reported successfully!");
-      setForm({ title: "", description: "", category: "", location: "", imageUrl: "" });
+      if (editItem) {
+        await updateItem(editItem.id, {
+          title: form.title,
+          description: form.description,
+          category: form.category as FoundItem["category"],
+          location: form.location,
+          imageUrl: form.imageUrl || "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600",
+          contactNumber: form.contactNumber,
+        });
+        toast.success("Item updated!");
+      } else {
+        await createItem({
+          title: form.title,
+          description: form.description,
+          category: form.category as FoundItem["category"],
+          location: form.location,
+          imageUrl: form.imageUrl || "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600",
+          contactNumber: form.contactNumber,
+          finderEmail: user.email || "",
+          finderName: user.displayName || "Anonymous",
+          finderPhoto: user.photoURL || "",
+          userId: user.uid,
+          status: "active",
+        });
+        toast.success("Item reported successfully!");
+      }
+      setForm({ title: "", description: "", category: "", location: "", imageUrl: "", contactNumber: "" });
       setImagePreview(null);
       onClose();
     } catch {
-      toast.error("Failed to report item");
+      toast.error(editItem ? "Failed to update item" : "Failed to report item");
     } finally {
       setLoading(false);
     }
@@ -147,7 +184,9 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
           className="h-full w-full max-w-md overflow-y-auto bg-card shadow-modal"
         >
           <div className="flex items-center justify-between border-b border-border p-4">
-            <h2 className="font-heading text-lg font-bold text-foreground">Report Found Item</h2>
+            <h2 className="font-heading text-lg font-bold text-foreground">
+              {editItem ? "Edit Item" : "Report Found Item"}
+            </h2>
             <button type="button" onClick={onClose} className="rounded-full p-1.5 transition-colors hover:bg-muted">
               <X className="h-4 w-4" />
             </button>
@@ -201,6 +240,17 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
                 placeholder="e.g. Central Park, Bench #12"
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contactNumber">Contact Number (optional)</Label>
+              <Input
+                id="contactNumber"
+                type="tel"
+                placeholder="e.g. +1 555-123-4567"
+                value={form.contactNumber}
+                onChange={(e) => setForm({ ...form, contactNumber: e.target.value })}
               />
             </div>
 
@@ -259,7 +309,7 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading || uploading}>
-              {loading ? "Submitting..." : "Report Item"}
+              {loading ? "Submitting..." : editItem ? "Save Changes" : "Report Item"}
             </Button>
           </form>
         </motion.div>
