@@ -15,8 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createItem } from "@/hooks/useItems";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+const CLOUDINARY_CLOUD_NAME = "dymnz91fx";
+const CLOUDINARY_UPLOAD_PRESET = "findit";
 
 const CATEGORIES = ["Electronics", "Pets", "Keys", "Wallet", "Other"] as const;
 
