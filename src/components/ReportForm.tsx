@@ -15,8 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createItem } from "@/hooks/useItems";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+const CLOUDINARY_CLOUD_NAME = "dymnz91fx";
+const CLOUDINARY_UPLOAD_PRESET = "findit";
 
 const CATEGORIES = ["Electronics", "Pets", "Keys", "Wallet", "Other"] as const;
 
@@ -52,12 +52,19 @@ const ReportForm = ({ open, onClose }: ReportFormProps) => {
 
     setUploading(true);
     try {
-      const fileName = `items/${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setForm((prev) => ({ ...prev, imageUrl: url }));
-      setImagePreview(URL.createObjectURL(file));
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || "Upload failed");
+
+      setForm((prev) => ({ ...prev, imageUrl: data.secure_url }));
+      setImagePreview(data.secure_url);
       toast.success("Image uploaded!");
     } catch {
       toast.error("Failed to upload image");
